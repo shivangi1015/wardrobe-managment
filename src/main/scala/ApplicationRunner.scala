@@ -6,12 +6,14 @@ object ApplicationRunner extends App {
 
   val wardrobeManagementRepo = WardrobeManagementRepository
 
-  val result = wardrobeManagementRepo.listClothing
-  result.foreach(i => println(s"*************** $i"))
-/*
   val insertResult = wardrobeManagementRepo.insert(Clothing(1, "a", "b"))
   insertResult.foreach(i => println("---------->>>> $i"))
-  Thread.sleep(20000)*/
+  Thread.sleep(10000)
+
+  val result = wardrobeManagementRepo.listClothing
+  result.foreach(i => println(s"*************** $i"))
+
+  Thread.sleep(10000)
 
   val create = wardrobeManagementRepo.create
   create.foreach(i => println(s"-------->>> ${i}"))

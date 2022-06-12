@@ -7,7 +7,9 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
-object WardrobeManagementRepository extends WardrobeReadRepository with WardrobeReadRepositoryImpl with ClothingTable with DbComponent with PostgresDbComponent
+object WardrobeManagementRepository extends WardrobeManagementRepository with WardrobeReadRepositoryImpl with ClothingTable with DbComponent with PostgresDbComponent
+
+trait WardrobeManagementRepository extends WardrobeReadRepository
 
 trait WardrobeReadRepository {
   def listClothing: Future[Vector[String]]
@@ -32,12 +34,13 @@ trait WardrobeReadRepositoryImpl extends WardrobeReadRepository {
       println("================")*/
     }
 
-  /*def insert(clothing: Clothing): Future[Int] = {
+  def insert(clothing: Clothing): Future[Int] = {
     println("inserting.....")
     db.run(wardrobeTableQuery += clothing)
-  }*/
+  }
 
   def create: Future[Int] = {
+    println("Creating table......")
     val createQuery: DBIO[Int] = sqlu"""create table "Player"(
 "player_id" bigserial primary key,
 "name" varchar not null,
