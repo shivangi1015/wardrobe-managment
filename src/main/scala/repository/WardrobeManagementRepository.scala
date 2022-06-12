@@ -12,44 +12,44 @@ object WardrobeManagementRepository extends WardrobeManagementRepository with Wa
 trait WardrobeManagementRepository extends WardrobeReadRepository
 
 trait WardrobeReadRepository {
-  def listClothing: Future[Vector[String]]
+  def listClothing: Future[List[Clothing]]
   def create: Future[Int]
+  def searchCloth(name: String): Future[Option[Clothing]]
 }
 
 trait WardrobeReadRepositoryImpl extends WardrobeReadRepository {
   this: DbComponent with ClothingTable =>
    import driver.api._
 
-    def listClothing: Future[Vector[String]] = {
+    def listClothing: Future[List[Clothing]] = {
       println("Running the method!!!")
 
-      db.run(sql"""select name from clothing where id = 1;""".as[String])
-     /* val l = db.run(wardrobeTableQuery.to[List].result)
+      val l = db.run(wardrobeTableQuery.to[List].result)
       l.onComplete {
         case Success(value) => println("-------")
           println(value)
         case Failure(exception) => println("1111111111")
           println(exception)
       }
-      println("================")*/
+      println("================")
+      l
     }
 
   def insert(clothing: Clothing): Future[Int] = {
-    println("inserting.....")
+    println("inserting in clothing table!")
     db.run(wardrobeTableQuery += clothing)
   }
 
   def create: Future[Int] = {
-    println("Creating table......")
-    val createQuery: DBIO[Int] = sqlu"""create table "Player"(
-"player_id" bigserial primary key,
-"name" varchar not null,
-"country" varchar not null,
-"dob" date
-) """
+    println("Creating table clothing table!")
+    val createQuery: DBIO[Int] =
+      sqlu"""create table "clothing"("name" varchar primary key, "category" varchar not null) """
     db.run(createQuery)
   }
 
+  def searchCloth(name: String): Future[Option[Clothing]] ={
+   db.run(wardrobeTableQuery.filter(_.name === name).result.headOption)
+  }
 
 }
 trait ClothingTable {
@@ -59,10 +59,9 @@ trait ClothingTable {
 
   val wardrobeTableQuery: TableQuery[ClothingSlickMapping] = TableQuery[ClothingSlickMapping]
   class ClothingSlickMapping(tag: Tag) extends Table[Clothing](tag, "clothing") {
-    val id: Rep[Int] = column[Int]("id", O.PrimaryKey, O.AutoInc)
-    val name: Rep[String] = column[String]("name", O.Unique)
+    val name: Rep[String] = column[String]("name", O.PrimaryKey,O.Unique)
     val category: Rep[String] = column[String]("category", O.Unique)
-    override def * = (id, name, category) <> (Clothing.tupled, Clothing.unapply)
+    override def * = (name, category) <> (Clothing.tupled, Clothing.unapply)
   }
 }
 
