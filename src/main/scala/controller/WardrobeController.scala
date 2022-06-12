@@ -1,22 +1,16 @@
 package controller
 
-import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
-import akka.stream.alpakka.csv.scaladsl.CsvParsing
-import akka.stream.alpakka.csv.scaladsl.CsvToMap
-import akka.stream.scaladsl.{FileIO, Flow, Sink}
-import akka.util.ByteString
+import akka.stream.alpakka.csv.scaladsl.{CsvParsing, CsvToMap}
+import akka.stream.scaladsl.Sink
 import model.{Clothing, WardrobeResponse}
 import repository.WardrobeManagementRepository
 import spray.json._
 
-import java.io.FileOutputStream
-import java.nio.file.Paths
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
@@ -46,16 +40,20 @@ class WardrobeController(wardrobeManagementRepo: WardrobeManagementRepository)
       post {
         fileUpload("fileUpload") {
           case (_, fileStream) =>
-            onComplete(fileStream.via(CsvParsing.lineScanner())
-              .via(CsvToMap.withHeaders("name", "category"))
-              .map(_.mapValues(e => e.utf8String))
-              .map { m => Clothing(m("name"), m("category"))}
-              .map(WardrobeManagementRepository.insert)
-              .runWith(Sink.ignore)) {
-              case Success(value) => complete("Successfully updated!")
-              case Failure(exception) => complete(s"Failed to update $exception")
-            }
+
+            val res =
+              fileStream.via(CsvParsing.lineScanner())
+                .via(CsvToMap.withHeaders("name", "category"))
+                .map(_.mapValues(e => e.utf8String))
+                .map { m => Clothing(m("name"), m("category"))}
+                .runWith(Sink.seq)
+
+             onComplete(res.map(_ => WardrobeManagementRepository.bulkInsert _)) {
+               case Success(_) => complete("Successfully updated!")
+               case Failure(exception) => complete(s"Failed to update $exception")
+             }
+           }
         }
       }
-    }
+
 }

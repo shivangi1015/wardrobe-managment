@@ -29,6 +29,8 @@ trait WardrobeReadRepositoryImpl extends WardrobeReadRepository {
 
 trait WardrobeWriteRepository {
   def insert(clothing: Clothing): Future[Int]
+  def bulkInsert(listOfClothes: List[Clothing]): Future[Option[Int]]
+  def create: Future[Unit]
 }
 
   trait WardrobeWriteRepositoryImpl extends WardrobeWriteRepository {
@@ -37,6 +39,7 @@ trait WardrobeWriteRepository {
 
     def insert(clothing: Clothing): Future[Int] = db.run(wardrobeTableQuery += clothing)
     def create: Future[Unit] = db.run(wardrobeTableQuery.schema.create)
+    def bulkInsert(listOfClothes: List[Clothing]): Future[Option[Int]] = db.run(wardrobeTableQuery ++= listOfClothes)
   }
 
 trait ClothingTable {
