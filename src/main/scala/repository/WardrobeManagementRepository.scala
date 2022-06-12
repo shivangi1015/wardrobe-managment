@@ -4,54 +4,41 @@ import database.{DbComponent, PostgresDbComponent}
 import model.Clothing
 
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Failure, Success}
 
-object WardrobeManagementRepository extends WardrobeManagementRepository with WardrobeReadRepositoryImpl with ClothingTable with DbComponent with PostgresDbComponent
+object WardrobeManagementRepository extends WardrobeManagementRepository with WardrobeReadRepositoryImpl with
+  WardrobeWriteRepositoryImpl with DbComponent with ClothingTable with PostgresDbComponent
 
-trait WardrobeManagementRepository extends WardrobeReadRepository
+trait WardrobeManagementRepository extends WardrobeReadRepository with WardrobeWriteRepository
 
 trait WardrobeReadRepository {
   def listClothing: Future[List[Clothing]]
-  def create: Future[Int]
   def searchCloth(name: String): Future[Option[Clothing]]
 }
 
 trait WardrobeReadRepositoryImpl extends WardrobeReadRepository {
   this: DbComponent with ClothingTable =>
-   import driver.api._
 
-    def listClothing: Future[List[Clothing]] = {
-      println("Running the method!!!")
+  import driver.api._
 
-      val l = db.run(wardrobeTableQuery.to[List].result)
-      l.onComplete {
-        case Success(value) => println("-------")
-          println(value)
-        case Failure(exception) => println("1111111111")
-          println(exception)
-      }
-      println("================")
-      l
-    }
+  def listClothing: Future[List[Clothing]] = db.run(wardrobeTableQuery.to[List].result)
 
-  def insert(clothing: Clothing): Future[Int] = {
-    println("inserting in clothing table!")
-    db.run(wardrobeTableQuery += clothing)
-  }
-
-  def create: Future[Int] = {
-    println("Creating table clothing table!")
-    val createQuery: DBIO[Int] =
-      sqlu"""create table "clothing"("name" varchar primary key, "category" varchar not null) """
-    db.run(createQuery)
-  }
-
-  def searchCloth(name: String): Future[Option[Clothing]] ={
-   db.run(wardrobeTableQuery.filter(_.name === name).result.headOption)
-  }
+  def searchCloth(name: String): Future[Option[Clothing]] =
+    db.run(wardrobeTableQuery.filter(_.name === name).result.headOption)
 
 }
+
+trait WardrobeWriteRepository {
+  def insert(clothing: Clothing): Future[Int]
+}
+
+  trait WardrobeWriteRepositoryImpl extends WardrobeWriteRepository {
+    this: DbComponent with ClothingTable =>
+    import driver.api._
+
+    def insert(clothing: Clothing): Future[Int] = db.run(wardrobeTableQuery += clothing)
+    def create: Future[Unit] = db.run(wardrobeTableQuery.schema.create)
+  }
+
 trait ClothingTable {
   this: DbComponent =>
 

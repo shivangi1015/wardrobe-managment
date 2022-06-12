@@ -1,31 +1,42 @@
 package controller
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
-import model.{Clothing, Wardrobe}
+import akka.stream.scaladsl.FileIO
+import akka.util.ByteString
+import model.{Clothing, WardrobeResponse}
 import repository.WardrobeManagementRepository
-
-import scala.io.StdIn
-import scala.util.{Failure, Success}
-import scala.concurrent.ExecutionContext.Implicits.global
-import akka.http.scaladsl.server.Directives
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json._
 
-class WardrobeController(wardrobeManagementRepo: WardrobeManagementRepository)(implicit val system: ActorSystem, val materializer: ActorMaterializer) extends SprayJsonSupport with DefaultJsonProtocol {
+import java.io.FileOutputStream
+import java.nio.file.Paths
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success}
 
-  implicit val clothing = jsonFormat2(Clothing)
-  implicit val listOfClothing = jsonFormat1(Wardrobe)
+class WardrobeController(wardrobeManagementRepo: WardrobeManagementRepository)
+                        (implicit val system: ActorSystem, val materializer: ActorMaterializer)
+                         extends SprayJsonSupport with DefaultJsonProtocol {
 
-  val route =
+  implicit val clothing: RootJsonFormat[Clothing] = jsonFormat2(Clothing)
+  implicit val listOfClothing: RootJsonFormat[WardrobeResponse] = jsonFormat1(WardrobeResponse)
+
+  val route: Route =
     path("listClothing") {
       get {
-        wardrobeManagementRepo.listClothing.onComplete {
-          case Success(value) => complete(value)
+        onComplete(wardrobeManagementRepo.listClothing) {
+          case Success(value) => complete(WardrobeResponse(value))
           case Failure(exception) => complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
+        }
+      }
+    } ~ path("update" / "wardrobe") {
+      entity(as[Clothing]) { request =>
+        onComplete(wardrobeManagementRepo.insert(request)) {
+          case Success(_) => complete("Successfully Inserted!")
+          case Failure(_) => complete("")
         }
       }
     }

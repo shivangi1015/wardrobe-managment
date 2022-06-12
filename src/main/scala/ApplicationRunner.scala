@@ -1,13 +1,10 @@
+import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.stream.ActorMaterializer
+import controller.WardrobeController
 import repository.WardrobeManagementRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives._
-import akka.stream.ActorMaterializer
-import controller.WardrobeController
-
 import scala.io.StdIn
 
 object ApplicationRunner extends App {
