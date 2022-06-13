@@ -2,19 +2,25 @@ package repository
 
 import database.{DbComponent, PostgresDbComponent}
 import model.Clothing
+import slick.dbio.DBIO
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
-object WardrobeManagementRepository extends WardrobeManagementRepository with WardrobeReadRepositoryImpl with ClothingTable with DbComponent with PostgresDbComponent
+object WardrobeManagementRepository extends WardrobeManagementRepository with WardrobeReadRepositoryImpl with
+  WardrobeWriteRepositoryImpl with ClothingTable with DbComponent with PostgresDbComponent
 
-trait WardrobeManagementRepository extends WardrobeReadRepository
+trait WardrobeManagementRepository extends WardrobeReadRepository with WardrobeWriteRepository
 
 trait WardrobeReadRepository {
   def listClothing: Future[List[Clothing]]
-  def create: Future[Int]
   def searchCloth(name: String): Future[Option[Clothing]]
+}
+
+trait WardrobeWriteRepository {
+  def create: Future[Int]
+  def insert(clothing: Clothing): Future[Int]
 }
 
 trait WardrobeReadRepositoryImpl extends WardrobeReadRepository {
@@ -35,6 +41,17 @@ trait WardrobeReadRepositoryImpl extends WardrobeReadRepository {
       l
     }
 
+  def searchCloth(name: String): Future[Option[Clothing]] ={
+   db.run(wardrobeTableQuery.filter(_.name === name).result.headOption)
+  }
+
+}
+
+trait WardrobeWriteRepositoryImpl extends WardrobeWriteRepository {
+
+  this: DbComponent with ClothingTable =>
+  import driver.api._
+
   def insert(clothing: Clothing): Future[Int] = {
     println("inserting in clothing table!")
     db.run(wardrobeTableQuery += clothing)
@@ -42,16 +59,12 @@ trait WardrobeReadRepositoryImpl extends WardrobeReadRepository {
 
   def create: Future[Int] = {
     println("Creating table clothing table!")
-    val createQuery: DBIO[Int] =
+    val createQuery =
       sqlu"""create table "clothing"("name" varchar primary key, "category" varchar not null) """
     db.run(createQuery)
   }
-
-  def searchCloth(name: String): Future[Option[Clothing]] ={
-   db.run(wardrobeTableQuery.filter(_.name === name).result.headOption)
-  }
-
 }
+
 trait ClothingTable {
   this: DbComponent =>
 
